@@ -1,0 +1,239 @@
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//	Hello World,                                                                                                             //
+//	                                                                                                                         //
+//	please type the name of the file you want to read in the String called "fileName". It is necessary that it exists        //
+//	and is placed in the "dataInput" folder. Once you run the program, an output file with the same name will be created     //
+//	in the "dataOutput" folder. We hope you like the program.                                                                //
+//                                                                                                                           //
+// 	Cheers,                                                                                                                  //
+//                                                                                                                           //
+// 	MAGo Code Team.                                                                                                          //
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+package utilities;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
+import model.Photo;
+import model.Slide;
+
+public class Main {
+	
+	private static final String ONE_SPACE = " ", BREAK_LINE = "\n";
+	private static final int NUMBER_REGIONS = 3;
+	
+	private static String fileName = "e_shiny_selfies", inputFolderName = "dataInput/", outputFolderName = "dataOutput/", 
+			inputFileExtension = ".txt", outputFileExtension = ".out";
+	
+	private static int numberPhotos = 0;
+	private static List<Photo> photoList = new ArrayList<Photo>();
+	private static List<Slide> slideList = new ArrayList<Slide>(), transitionList = new ArrayList<Slide>();
+
+	public static void main(String[] args) {
+		System.out.println("Reading input file...");
+		readFile(inputFolderName.concat(fileName).concat(inputFileExtension));
+		
+		// Sort photos by number of tags.
+		sortPhotosByNumberTags();
+
+		System.out.println("Starting algorithm...");
+		mergeLists();
+		
+		sortSlidesByNumberTags();
+		
+		createSlideTransitions();
+		
+		System.out.println("Number of slides: " + slideList.size());
+		for (Slide slide : slideList) {
+			System.out.println("Photo id 1: " + slide.getId1() + "Photo id 2: " + slide.getId2());
+			for (String tag : slide.getTagList()) {
+				System.out.println("--> Tag: " + tag);
+			}
+			System.out.println("");
+		}		
+		
+		System.out.println("");
+		System.out.println("Writing output file...");
+		writeFile(outputFolderName.concat(fileName).concat(outputFileExtension));
+	}
+	
+	// Method that sorts photos by number of tags ASC.
+	private static void sortPhotosByNumberTags() {
+		Collections.sort(photoList, new Comparator<Photo>() {
+			public int compare(Photo p1, Photo p2) {
+
+				Integer s1 = p1.getTagList().size();
+				Integer s2 = p2.getTagList().size();
+
+				int sComp = s1.compareTo(s2);
+
+				return -1 * sComp;
+			}
+		});
+	}
+	
+	// Method that merges slides and photos lists.
+	private static void mergeLists() {
+		int length = (photoList.size() / 2) - 1;
+		
+		if (photoList.size() % 2 == 0) {
+			length++;
+		}
+		
+		for (int i = 0; i < length; i++) {
+			List<String> tL = new ArrayList<String>();
+			
+			Photo p1 = photoList.get(i),
+				  p2 = photoList.get(photoList.size() - 1 - i);
+			
+			for (String tag : p1.getTagList()) {
+				tL.add(tag);
+			}
+			
+			for (String tag : p2.getTagList()) {
+				tL.add(tag);
+			}
+			
+			// TODO - Reduce repeated tags.
+			/*for (int j = 0; j < tL.size(); i++) {
+				
+			}*/
+			slideList.add(new Slide(p1.getPhotoId(), p2.getPhotoId(), tL));
+		}
+	}
+	
+	// Method that orders by number of tags.
+	private static void sortSlidesByNumberTags() {
+		Collections.sort(slideList, new Comparator<Slide>() {
+			public int compare(Slide s1, Slide s2) {
+
+				Integer sS1 = s1.getTagList().size();
+				Integer sS2 = s2.getTagList().size();
+
+				int sComp = sS1.compareTo(sS2);
+
+				return -1 * sComp;
+			}
+		});
+	} 
+	
+	// Method that creates the slide transitions.
+	private static void createSlideTransitions() {
+		/*int length = (slideList.size() / 2) - 1;
+		
+		if (slideList.size() % 2 == 0) {
+			length++;
+		}
+		
+		for (int i = 0; i < length; i++) {
+			transitionList.add(slideList.get(i));
+			transitionList.add(slideList.get(length - i - 1));
+		}*/
+		
+		// NEW CODE.
+		int length = slideList.size() / NUMBER_REGIONS / 2 - 1;
+		
+		if (slideList.size() % 2 == 0) {
+			length++;
+		}
+		
+		for (int i = 0; i < NUMBER_REGIONS; i++) {
+			for (int j = 0; j < length; j++) {
+				transitionList.add(slideList.get(j + i * length));
+				//System.out.println(i * length - j - 1);
+				transitionList.add(slideList.get((i + 1) * length - j - 1));
+			}
+		}
+		
+		if (slideList.size() % 2 != 0) {
+			transitionList.add(slideList.get(slideList.size() - 1));
+		}
+	}
+	
+	// Method that reads the file.
+	private static void readFile(String filePath) {
+		try {
+			String [] data; // Array of strings that contains the different cells.
+			
+			// Open the file and read it.
+			BufferedReader bufferedReader = new BufferedReader(new FileReader(filePath));
+			
+			// Read the next line;
+			data = bufferedReader.readLine().split(ONE_SPACE);
+			
+			// Number of photos.
+			System.out.println(">> Reading number of photos...");
+			numberPhotos = Integer.parseInt(data[0]);
+			
+			System.out.println(">> Reading photos info...");
+			System.out.println("");
+			for (int i = 0; i < numberPhotos; i++) {
+				data = bufferedReader.readLine().split(ONE_SPACE);
+				
+				List<String> tagList = new ArrayList<String>();
+				
+				for (int j = 2; j < data.length; j++) {
+					tagList.add(data[j]);
+				}
+				
+				if (data[0].toUpperCase().equals("V")) {
+					photoList.add(new Photo(true, i, tagList));
+				} else {
+					slideList.add(new Slide(i, i, tagList));
+				}
+			}
+			
+			// Close the file.
+			bufferedReader.close();
+			
+		} catch (IOException e) {
+			System.out.println("Error while reading the input file: " + e);
+		}
+	}
+
+	
+	// Method that writes the output file, creating it previously in case it does not exist.
+	private static void writeFile(String filePath) {
+		FileWriter file = null;
+		PrintWriter printWriter = null;
+		
+		try {
+			// Create the printer.
+			file = new FileWriter(filePath);
+			printWriter = new PrintWriter(file);
+			
+			// Create the output.
+			String output = Integer.toString(slideList.size());
+			
+			for (Slide slide : slideList) {
+				output = output.concat(BREAK_LINE).concat(Integer.toString(slide.getId1()));
+				
+				if (slide.getId1() != slide.getId2()) {
+					output = output.concat(ONE_SPACE).concat(Integer.toString(slide.getId2()));
+				}
+			}
+			
+			// Print the output in the file.
+			printWriter.print(output);
+		} catch (IOException e) {
+			System.out.println("Error while writing the output file: " + e);
+		} finally {
+			try {
+				printWriter.close();
+				file.close();
+				System.out.println(">> Output file has been written!");
+			} catch (IOException e) {
+				System.out.println("Error while closing the output file: " + e);
+			}
+		}
+	}
+
+}

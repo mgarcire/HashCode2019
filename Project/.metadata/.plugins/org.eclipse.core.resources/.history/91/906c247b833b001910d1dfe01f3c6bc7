@@ -1,0 +1,6 @@
+package model;
+
+public class Photo {
+	private boolean isVertical;
+	private int 
+}
